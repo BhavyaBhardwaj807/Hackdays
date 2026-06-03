@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-navy-950 text-navy-50 font-sans antialiased select-none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Accessible animations & high contrast settings */
+.tactile-btn {
+  @apply active:scale-95 transition-all duration-200 cursor-pointer select-none outline-none;
+}
+
+.card-navy {
+  @apply bg-navy-900 border border-navy-800 rounded-3xl p-6 shadow-xl;
+}
+
+/* Pulsing voice microphone button animation */
+@keyframes voice-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 180, 216, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(0, 180, 216, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 180, 216, 0);
+  }
+}
+
+.mic-active-pulse {
+  animation: voice-pulse 1.5s infinite;
+}
+
+/* Custom horizontal scrolling layouts for lists */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Pulse progress circle styling */
+.progress-ring__circle {
+  transition: stroke-dashoffset 0.35s;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}

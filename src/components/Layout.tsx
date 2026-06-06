@@ -6,6 +6,7 @@ import { useMedication } from '../context/MedicationContext';
 import { useFirebase } from '../context/FirebaseContext';
 import { SarvamService } from '../services/sarvamService';
 
+
 interface LayoutProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -45,6 +46,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, childre
         const transcript = event.results[0][0].transcript;
         setSpeechText(transcript);
         handleSpeechCompletion(transcript);
+          console.log("VOICE RECEIVED:", transcript);
       };
 
       rec.onerror = (e: any) => {
@@ -109,8 +111,28 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, childre
     }
 
     // 2. Otherwise parse text to add new medication
-    const parsedMed = SarvamService.parseMedicationFromVoice(text);
+    console.log("CALLING SARVAM AI...");
+    const parsedMed = await SarvamService.extractMedicationFromText(text);
+    if (!parsedMed?.name) {
+      alert("Could not identify medication name");
+      return;
+    }
+    console.log("SARVAM RAW:", parsedMed);
+    parsedMed.timing = Array.isArray(parsedMed.timing)
+      ? parsedMed.timing
+      : ['morning'];
+
+    parsedMed.instructions =
+      parsedMed.instructions || 'After meals';
+
+    parsedMed.frequency =
+        parsedMed.frequency || 'Once Daily';
+
+    parsedMed.dosage =
+      parsedMed.dosage || '1 Tablet';
+
     await addMedication(parsedMed);
+    console.log("AI Medication:", parsedMed);
 
     // Trigger visual/vocal success notification!
     const successSpeech: Record<LanguageCode, string> = {

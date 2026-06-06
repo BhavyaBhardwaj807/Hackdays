@@ -15,6 +15,12 @@ export class SarvamService {
   }
 
   public static async speechToText(audioBlob: Blob, languageCode: LanguageCode): Promise<string> {
+    console.log(
+  "LANGUAGE:",
+  languageCode,
+  this.mapLanguageCode(languageCode)
+);
+
     const response = await SarvamSpeechService.transcribe({
       file: audioBlob,
       language_code: this.mapLanguageCode(languageCode) as SarvamAI.SpeechToTextLanguage,
@@ -42,13 +48,90 @@ export class SarvamService {
     return audioBase64;
   }
 
-  public static async chatSaaras(message: string, languageCode: LanguageCode): Promise<string> {
-    return SarvamChatService.askWithContext({
-      context: '',
-      question: message,
-      languageCode,
-    });
+  public static async extractMedicationFromText(text: string) {
+    console.log("USING SarvamService.extractMedicationFromText");
+  const prompt = `
+Extract medication details from this transcript.
+
+Return ONLY valid JSON.
+
+{
+  "name": "",
+  "dosage": "",
+  "frequency": "",
+  "timing": [],
+  "instructions": ""
+}
+
+Transcript:
+${text}
+`;
+console.log("BEFORE API");
+  const response = await SarvamChatService.completions({
+    model: 'sarvam-30b',
+    temperature: 0,
+    messages: [
+      {
+        role: 'system',
+        content: `
+'Extract medication details and return ONLY JSON. No explanation.',
+`,
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  });
+  console.log("After API");
+
+  console.log("FULL RESPONSE:");
+console.log(response);
+console.log(JSON.stringify(response, null, 2));
+console.log("FINISH REASON:");
+console.log((response as any)?.choices?.[0]?.finish_reason);
+
+console.log("MESSAGE:");
+console.log((response as any)?.choices?.[0]?.message);
+
+const content =
+  (response as any)?.choices?.[0]?.message?.content;
+
+console.log("CONTENT:", content);
+
+  console.log('SARVAM RAW:', content);
+
+  try {
+    const cleaned = content
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+
+    const parsed = JSON.parse(cleaned);
+
+    return {
+      name: parsed.name ?? '',
+      dosage: parsed.dosage ?? '',
+      frequency: parsed.frequency ?? 'Once Daily',
+      timing: Array.isArray(parsed.timing)
+        ? parsed.timing
+        : ['morning'],
+      startDate: new Date().toISOString().split('T')[0],
+      instructions: parsed.instructions ?? '',
+    };
+  } catch (err) {
+    console.error('Invalid JSON:', content);
+
+    return {
+      name: text,
+      dosage: '1 Tablet',
+      frequency: 'Once Daily',
+      timing: ['morning'],
+      startDate: new Date().toISOString().split('T')[0],
+      instructions: '',
+    };
   }
+}
 
   public static parseMedicationFromVoice(text: string): Omit<any, 'id'> {
     const textLower = text.toLowerCase();
@@ -107,7 +190,7 @@ export class SarvamService {
     const extractedText = await SarvamDocumentService.extractTextFromSource(base64Data);
     return { extractedText };
   }
-
+  
   public static async chatWithDocument(extractedText: string, question: string, lang = 'en'): Promise<string> {
     return SarvamChatService.askWithContext({
       context: extractedText,

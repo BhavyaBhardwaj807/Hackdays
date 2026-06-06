@@ -364,7 +364,7 @@ export const Medicines: React.FC = () => {
                     {/* Displays scheduled time blocks */}
                     <div className="flex items-center space-x-2 mt-3 pl-0.5">
                       {(['morning', 'afternoon', 'evening', 'night'] as const).map(slot => {
-                        const active = med.timing.includes(slot);
+                        const active = med.timing?.includes(slot) ?? false;
                         return (
                           <span 
                             key={slot}

@@ -1,3 +1,4 @@
+import { extractTextFromPdf } from '../services/pdfExtractor';
 import ChatWithDocument from '../components/ChatWithDocument';
 import React, { useState } from 'react';
 import { useMedication } from '../context/MedicationContext';
@@ -22,47 +23,72 @@ export const Documents: React.FC = () => {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     console.log("FILE SELECTED:", file);
+
     if (!file) return;
 
     setIsUploading(true);
-    
-    // Convert to Base64 for local inline viewing without cloud dependencies!
+
     const reader = new FileReader();
+
     reader.onload = async (event) => {
       console.log("READER LOADED");
 
+      
       const base64 = event.target?.result as string;
       console.log("BASE64 LENGTH:", base64?.length);
 
+      let extractedText = '';
+
+      // PDF extraction
+      if (file.type === 'application/pdf') {
       try {
-        console.log("ABOUT TO CALL addDocument");
+      extractedText = await extractTextFromPdf(file);
 
-        // Add structured prescription document
-        await addDocument({
-          name: docName || file.name.split('.')[0] || "Medical Document",
-          type,
-          date: new Date().toISOString().split('T')[0],
-          doctor: doctor || "Dr. Amit Sharma",
-          hospital: hospital || "City Health Clinic",
-          medicines: ['Aspirin', 'Paracetamol'], // mock parsed list for generic documents
-          fileUrl: base64
-        });
+      console.log(
+      "PDF TEXT EXTRACTED:",
+      extractedText.substring(0, 500)
+      );
 
-        console.log("addDocument FINISHED");
+      console.log(
+      "TOTAL EXTRACTED LENGTH:",
+      extractedText.length
+    );
+  } catch (err) {
+    console.error("PDF EXTRACTION FAILED:", err);
+  }
+}
 
-        // Reset
-        setDocName('');
-        setDoctor('');
-        setHospital('');
-        setIsUploading(false);
-      } catch (err) {
-        console.error("UPLOAD ERROR:", err);
-        setIsUploading(false);
-      }
-    };
+try {
+  console.log("ABOUT TO CALL addDocument");
 
-    reader.readAsDataURL(file);
-  };
+  await addDocument({
+    name: docName || file.name.split('.')[0] || "Medical Document",
+    type,
+    date: new Date().toISOString().split('T')[0],
+    doctor: doctor || "Dr. Amit Sharma",
+    hospital: hospital || "City Health Clinic",
+    medicines: ['Aspirin', 'Paracetamol'],
+    fileUrl: base64,
+    extractedText
+  });
+
+  console.log("addDocument FINISHED");
+
+  setDocName('');
+  setDoctor('');
+  setHospital('');
+  setIsUploading(false);
+} catch (err) {
+  console.error("UPLOAD ERROR:", err);
+  setIsUploading(false);
+}
+
+
+};
+
+reader.readAsDataURL(file);
+};
+
 
   return (
     <div className="space-y-6">

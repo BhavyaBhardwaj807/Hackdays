@@ -86,7 +86,7 @@ const INITIAL_MEDICATIONS: Medication[] = [
   }
 ];
 
-const INITIAL_DOCUMENTS: MedDocument[] = [
+/*const INITIAL_DOCUMENTS: MedDocument[] = [
   {
     id: 'doc-1',
     name: 'AIIMS Cardiology Prescription',
@@ -97,7 +97,7 @@ const INITIAL_DOCUMENTS: MedDocument[] = [
     medicines: ['Aspirin', 'Metformin', 'Atorvastatin'],
     fileUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800"><rect width="600" height="800" fill="%23F8FAFC"/><rect x="40" y="40" width="520" height="720" fill="none" stroke="%230F172A" stroke-width="2"/><text x="80" y="100" font-family="Outfit, sans-serif" font-size="28" font-weight="bold" fill="%230F172A">AIIMS CARDIOLOGY DEPT</text><text x="80" y="130" font-family="sans-serif" font-size="16" fill="%23475569">Dr. R. K. Sharma | Cardiology Specialists</text><line x1="80" y1="160" x2="520" y2="160" stroke="%23CBD5E1" stroke-width="2"/><text x="80" y="200" font-family="Outfit, sans-serif" font-weight="bold" font-size="20">Rx</text><text x="80" y="240" font-family="sans-serif" font-size="18">1. Tab. Aspirin (150mg) - 1 Daily after Breakfast</text><text x="80" y="280" font-family="sans-serif" font-size="18">2. Tab. Metformin (500mg) - Twice Daily with meals</text><text x="80" y="320" font-family="sans-serif" font-size="18">3. Tab. Atorvastatin (10mg) - 1 Daily at Night</text><line x1="80" y1="700" x2="200" y2="700" stroke="%23475569" stroke-width="1"/><text x="80" y="720" font-family="sans-serif" font-size="12" fill="%23475569">Authorized Signature</text></svg>'
   }
-];
+];*/
 
 export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { db, user, isFirebaseActive } = useFirebase();
@@ -136,14 +136,7 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         snapshot.forEach((doc) => {
           docsList.push({ id: doc.id, ...doc.data() } as MedDocument);
         });
-        if (docsList.length === 0) {
-          INITIAL_DOCUMENTS.forEach(async (d) => {
-            const { id, ...docWithoutId } = d;
-            await addDoc(collection(db, `users/${user.uid}/documents`), docWithoutId);
-          });
-        } else {
-          setDocuments(docsList);
-        }
+        setDocuments(docsList);
       });
 
       const logsQuery = query(collection(db, `users/${user.uid}/logs`));
@@ -171,13 +164,13 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         localStorage.setItem('pulse_medications', JSON.stringify(INITIAL_MEDICATIONS));
       }
 
-      const localDocs = localStorage.getItem('pulse_documents');
+      /*const localDocs = localStorage.getItem('pulse_documents');
       if (localDocs) {
         setDocuments(JSON.parse(localDocs));
       } else {
         setDocuments(INITIAL_DOCUMENTS);
         localStorage.setItem('pulse_documents', JSON.stringify(INITIAL_DOCUMENTS));
-      }
+      }*/
 
       const localLogs = localStorage.getItem('pulse_logs');
       if (localLogs) {
@@ -370,73 +363,85 @@ export const MedicationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
   
   const addDocument = async (docData: Omit<MedDocument, 'id'>) => {
-    if (isFirebaseActive && db && user) {
-      console.log('addDocument called (firebase)');
-      console.log('isFirebaseActive =', isFirebaseActive);
-      console.log('db =', db);
-      console.log('user =', user?.uid);
+  if (isFirebaseActive && db && user) {
+    console.log('addDocument called (firebase)');
+    console.log('isFirebaseActive =', isFirebaseActive);
+    console.log('db =', db);
+    console.log('user =', user?.uid);
 
-      try {
-        // Save metadata first
-        const ref = await addDoc(collection(db, `users/${user.uid}/documents`), {
+    try {
+      const ref = await addDoc(
+        collection(db, `users/${user.uid}/documents`),
+        {
           ...docData,
           uploadedAt: serverTimestamp(),
-        });
-
-        console.log('Firestore doc created:', ref.id);
-
-        // Process with Sarvam: extract text from the base64 fileUrl
-        try {
-          const extractedText = '';
-          
-
-          await setDoc(doc(db, `users/${user.uid}/documents`, ref.id), {
-            extractedText,
-            documentType: docData.type,
-            processedAt: serverTimestamp()
-          }, { merge: true });
-
-          console.log('Saved extractedText for', ref.id);
-        } catch (procErr) {
-          console.error('Error processing document with Sarvam:', procErr);
         }
-      } catch (err) {
-        console.error('Error saving document to Firestore:', err);
-      }
-    } else {
-      // Local-only fallback: include extractedText field after attempting local extraction
-      console.log('addDocument called (local)');
-      let extractedText = '';
-      try {
-        const extractedText = '';
-        
-      } catch (err) {
-        console.error('Local extraction failed:', err);
-      }
+      );
 
-      const newDoc: MedDocument = {
-        id: 'doc_' + Math.random().toString(36).substr(2, 9),
-        ...docData,
-        extractedText,
-        uploadedAt: new Date().toISOString(),
-        processedAt: new Date().toISOString(),
-      };
-      const updated = [newDoc, ...documents];
-      setDocuments(updated);
-      localStorage.setItem('pulse_documents', JSON.stringify(updated));
+      console.log('Firestore doc created:', ref.id);
+
+      await setDoc(
+        doc(db, `users/${user.uid}/documents`, ref.id),
+        {
+          extractedText: docData.extractedText || '',
+          documentType: docData.type,
+          processedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      console.log(
+        'Saved extractedText length:',
+        docData.extractedText?.length || 0
+      );
+    } catch (err) {
+      console.error('Error saving document to Firestore:', err);
     }
-  };
+
+  } else {
+    console.log('addDocument called (local)');
+
+    const newDoc: MedDocument = {
+      id: 'doc_' + Math.random().toString(36).substr(2, 9),
+      ...docData,
+      extractedText: docData.extractedText || '',
+      uploadedAt: new Date().toISOString(),
+      processedAt: new Date().toISOString(),
+    };
+
+    const updated = [newDoc, ...documents];
+    setDocuments(updated);
+    localStorage.setItem(
+      'pulse_documents',
+      JSON.stringify(updated)
+    );
+  }
+};
 
   const deleteDocument = async (id: string) => {
     if (isFirebaseActive && db && user) {
-      // Firebase delete
-    } else {
-      const updated = documents.filter(d => d.id !== id);
-      setDocuments(updated);
-      localStorage.setItem('pulse_documents', JSON.stringify(updated));
-    }
-  };
+      try {
+        const { deleteDoc, doc } = await import('firebase/firestore');
 
+        await deleteDoc(
+          doc(db, `users/${user.uid}/documents/${id}`)
+      );
+
+      console.log("DOCUMENT DELETED:", id);
+    } catch (err) {
+      console.error("DELETE FAILED:", err);
+    }
+  } else {
+    const updated = documents.filter(d => d.id !== id);
+
+    setDocuments(updated);
+
+    localStorage.setItem(
+      'pulse_documents',
+      JSON.stringify(updated)
+    );
+  }
+};
   
 
   return (

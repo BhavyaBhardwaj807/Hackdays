@@ -39,7 +39,11 @@ export const Home: React.FC = () => {
       let nearestSlot = '';
 
       medications.forEach(med => {
-        med.timing.forEach(slot => {
+        const timings = Array.isArray(med.timing)
+          ? med.timing
+          : [];
+
+        timings.forEach(slot => {
           const targetHour = slotHours[slot];
           const target = new Date();
           target.setHours(targetHour, 0, 0, 0);
@@ -99,8 +103,13 @@ export const Home: React.FC = () => {
   let takenDosesToday = 0;
 
   medications.forEach(m => {
-    m.timing.forEach(slot => {
+    const timings = Array.isArray(m.timing)
+      ? m.timing
+      : [];
+
+    timings.forEach(slot => {
       totalDosesToday++;
+
       if (todayLog[`${m.id}_${slot}`]?.taken) {
         takenDosesToday++;
       }
@@ -203,7 +212,9 @@ export const Home: React.FC = () => {
       {/* 3. Daily dose checkboxes list */}
       <div className="space-y-5">
         {slots.map(slot => {
-          const slotMeds = medications.filter(m => m.timing.includes(slot));
+          const slotMeds = medications.filter(
+            m => (m.timing || []).includes(slot)
+          );
           if (slotMeds.length === 0) return null;
 
           return (
